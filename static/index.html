@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SafetyPulse — Trust & Safety Ops</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <p>SafetyPulse</p>
+          <strong>Trust & Safety Ops</strong>
+        </div>
+        <nav class="side-nav" aria-label="工作区导航">
+          <a href="#overview" class="active">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".9"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
+            总览
+          </a>
+          <a href="#analytics">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12L6 7.5L9.5 10L14 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            图表分析
+          </a>
+          <a href="#monitoring">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            异常诊断
+          </a>
+          <a href="#accounts">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 13c0-2.21 2.239-4 5-4s5 1.79 5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11.5 7.5L13 9l2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            风险账号
+          </a>
+          <a href="#governance">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4.5v4c0 3 2.5 5.5 6 6 3.5-.5 6-3 6-6v-4L8 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            治理闭环
+          </a>
+        </nav>
+        <div class="side-meta">
+          <span>环境</span>
+          <strong>Local MVP</strong>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">平台安全智能分析台</p>
+            <h1>Safety Operations Workspace</h1>
+          </div>
+          <div class="actions">
+            <span id="apiStatus" class="status">连接中</span>
+            <span id="latestDate" class="badge">-</span>
+            <button id="refreshBtn" class="secondary">刷新</button>
+            <button id="seedBtn">重置演示数据</button>
+          </div>
+        </header>
+
+        <main class="content">
+          <section id="overview" class="workspace-section">
+            <div class="section-heading">
+              <div>
+                <h2>安全总览</h2>
+                <p>核心指标、趋势预测和当前风险状态</p>
+              </div>
+              <div class="filters" aria-label="分析筛选">
+                <div class="control-group">
+                  <label for="windowSelect">时间窗口</label>
+                  <select id="windowSelect">
+                    <option value="7">近 7 天</option>
+                    <option value="14">近 14 天</option>
+                    <option value="30">近 30 天</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label for="surfaceSelect">业务域</label>
+                  <select id="surfaceSelect">
+                    <option value="all">全部业务域</option>
+                    <option value="Video">视频内容安全</option>
+                    <option value="Live">直播内容安全</option>
+                    <option value="Account">账户安全</option>
+                    <option value="Privacy">隐私合规</option>
+                    <option value="Review Platform">审核平台</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label for="metricSelect">分析指标</label>
+                  <select id="metricSelect">
+                    <option value="violation_rate">违规命中率</option>
+                    <option value="report_rate">举报率</option>
+                    <option value="risk_accounts">高风险账号</option>
+                    <option value="avg_review_minutes">审核耗时</option>
+                    <option value="appeal_success_rate">申诉成功率</option>
+                    <option value="incidents">安全事件</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <section id="metricCards" class="metric-grid" aria-label="核心安全指标"></section>
+
+            <div class="overview-grid">
+              <section class="panel trend-panel" aria-labelledby="trendTitle">
+                <div class="panel-heading">
+                  <div>
+                    <h3 id="trendTitle">趋势与预测</h3>
+                    <p id="trendMeta">等待数据</p>
+                  </div>
+                  <span id="trendMetricBadge" class="badge">-</span>
+                </div>
+                <div id="forecastSummary" class="stat-strip"></div>
+                <div id="trendChart" class="chart"></div>
+                <div class="chart-legend">
+                  <span><i class="legend actual"></i>实际值</span>
+                  <span><i class="legend baseline"></i>历史基线</span>
+                  <span><i class="legend forecast"></i>预测</span>
+                </div>
+              </section>
+
+              <section class="panel" aria-labelledby="surfaceTitle">
+                <div class="panel-heading">
+                  <div>
+                    <h3 id="surfaceTitle">业务域健康度</h3>
+                    <p>举报、违规、事件和审核耗时</p>
+                  </div>
+                </div>
+                <div class="table-wrap compact-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>业务域</th>
+                        <th>曝光</th>
+                        <th>举报/千</th>
+                        <th>违规/千</th>
+                        <th>事件</th>
+                      </tr>
+                    </thead>
+                    <tbody id="surfaceRows"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section id="analytics" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>图表分析</h2>
+                <p>业务域、政策和地区风险对比</p>
+              </div>
+            </div>
+
+            <!-- Row 1: surface bar (main) + region ranking -->
+            <div class="analytics-row analytics-row--main">
+              <section class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>业务域风险对比</h3>
+                    <p>举报率与违规率（每千次曝光）</p>
+                  </div>
+                </div>
+                <div id="surfaceBarChart" class="chart chart-tall"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>地区风险排行</h3>
+                    <p>高风险账号数量</p>
+                  </div>
+                </div>
+                <div id="regionBarChart"></div>
+              </section>
+            </div>
+
+            <!-- Row 2: policy bar full width -->
+            <div class="analytics-row analytics-row--full">
+              <section class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>政策违规量分布</h3>
+                    <p>按违规类型排序，识别高危政策领域</p>
+                  </div>
+                </div>
+                <div id="policyBarChart" class="chart chart-tall"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="monitoring" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>异常诊断</h2>
+                <p>从异常信号定位主要贡献切片</p>
+              </div>
+              <span id="anomalyMeta" class="badge">0 个活跃异常</span>
+            </div>
+            <div class="diagnosis-grid">
+              <section class="panel anomaly-panel" aria-labelledby="anomalyTitle">
+                <div class="panel-heading">
+                  <div>
+                    <h3 id="anomalyTitle">异常队列</h3>
+                    <p>P0/P1/P2 风险信号</p>
+                  </div>
+                </div>
+                <div id="anomalyList" class="anomaly-list"></div>
+              </section>
+
+              <section class="panel" aria-labelledby="rootTitle">
+                <div class="panel-heading">
+                  <div>
+                    <h3 id="rootTitle">根因贡献度</h3>
+                    <p id="rootMeta">等待数据</p>
+                  </div>
+                  <span id="rootMetricBadge" class="badge">-</span>
+                </div>
+                <div id="rootSummary" class="stat-strip"></div>
+                <div id="rootBars" class="bars"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="accounts" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>风险账号工作区</h2>
+                <p id="accountMeta">按风险分排序的账号样本</p>
+              </div>
+              <span id="accountCount" class="badge">0</span>
+            </div>
+            <div class="accounts-grid">
+              <section class="panel accounts-panel" aria-labelledby="accountsTitle">
+                <div class="panel-heading">
+                  <div>
+                    <h3 id="accountsTitle">高风险账号 Drill-down</h3>
+                    <p>账号、账号簇、举报/违规量和处置建议</p>
+                  </div>
+                </div>
+                <div id="accountRows" class="account-list"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <h3>账号簇分布</h3>
+                    <p>按账号样本量聚合</p>
+                  </div>
+                </div>
+                <div id="clusterBarChart" class="chart chart-short"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="governance" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>治理闭环</h2>
+                <p>Owner、状态、动作和预期影响</p>
+              </div>
+            </div>
+            <section class="panel action-panel" aria-labelledby="actionTitle">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>优先级</th>
+                      <th>状态</th>
+                      <th>负责人</th>
+                      <th>影响切片</th>
+                      <th>动作</th>
+                      <th>预期影响</th>
+                    </tr>
+                  </thead>
+                  <tbody id="actionRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        </main>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
