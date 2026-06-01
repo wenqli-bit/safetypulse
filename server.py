@@ -1575,6 +1575,12 @@ class AttributionHandler(BaseHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def do_HEAD(self) -> None:
+        # Render health-check uses HEAD — respond 200 OK with no body
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         try:
@@ -1713,13 +1719,4 @@ def main() -> None:
     init_db()
     ensure_safety_seeded()
     port = int(os.environ.get("PORT", "8000"))
-    server = ThreadingHTTPServer(("127.0.0.1", port), AttributionHandler)
-    print(f"SafetyPulse running at http://127.0.0.1:{port}")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nStopping server")
-
-
-if __name__ == "__main__":
-    main()
+    server = ThreadingHTTPServer(("0.0.0.0", port), Attribution
