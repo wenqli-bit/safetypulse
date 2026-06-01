@@ -655,3 +655,401 @@ els.seedBtn.addEventListener("click", async () => {
 syncControls();
 wireNavigation();
 refresh();
+
+/* ══════════════════════════════════════
+   漏斗分析
+══════════════════════════════════════ */
+const FUNNEL_STAGES = [
+  { key: "reported",  label: "内容举报",  color: "#3b82f6", desc: "用户 / 系统上报的违规内容" },
+  { key: "triaged",   label: "分诊队列",  color: "#0d9488", desc: "经过优先级排序进入审核队列" },
+  { key: "reviewed",  label: "人工审核",  color: "#7c3aed", desc: "审核员完成内容核查" },
+  { key: "actioned",  label: "处置决定",  color: "#d97706", desc: "内容下架 / 账号封禁等执行" },
+  { key: "appealed",  label: "申诉受理",  color: "#dc2626", desc: "用户发起申诉并进入复核" },
+];
+
+const ACTION_TYPES = [
+  { label: "内容下架", pct: 41 },
+  { label: "警告提示", pct: 28 },
+  { label: "账号封禁", pct: 17 },
+  { label: "功能限制", pct: 9  },
+  { label: "无需处置", pct: 5  },
+];
+
+function funnelMockData(days, surface) {
+  const seed = days * 7 + (surface === "all" ? 0 : surface.charCodeAt(0));
+  const rng = (min, max, s = 0) => min + ((seed + s) % (max - min));
+  const base = rng(40000, 70000);
+  const counts = [
+    base,
+    Math.round(base * (0.68 + rng(0, 10, 1) / 100)),
+    Math.round(base * (0.68 + rng(0, 10, 1) / 100) * (0.71 + rng(0, 8, 2) / 100)),
+    Math.round(base * (0.68 + rng(0, 10, 1) / 100) * (0.71 + rng(0, 8, 2) / 100) * (0.88 + rng(0, 8, 3) / 100)),
+    Math.round(base * 0.055 + rng(0, 800, 4)),
+  ];
+  const times = [0, 2.1 + rng(0, 20, 5) / 10, 18 + rng(0, 60, 6) / 10, 0.8 + rng(0, 10, 7) / 10, 48 + rng(0, 30, 8)];
+  return { counts, times };
+}
+
+function renderFunnel() {
+  const days = Number(document.getElementById("funnelWindowSelect").value);
+  const surface = document.getElementById("funnelSurfaceSelect").value;
+  const { counts, times } = funnelMockData(days, surface);
+  const total = counts[0];
+
+  document.getElementById("funnelTotalBadge").textContent = compact(total) + " 举报";
+  document.getElementById("funnelMeta").textContent =
+    `近 ${days} 天 · ${surface === "all" ? "全部业务域" : surface}`;
+
+  // 漏斗图
+  const maxCount = counts[0];
+  const minPct = 40; // 最窄也保留 40% 宽度
+  const wrap = document.getElementById("funnelChart");
+  wrap.innerHTML = FUNNEL_STAGES.map((stage, i) => {
+    const count = counts[i];
+    const widthPct = minPct + ((count / maxCount) * (100 - minPct));
+    const convRate = i === 0 ? null : ((count / counts[i - 1]) * 100).toFixed(1);
+    const rateClass = convRate === null ? "" : convRate >= 85 ? "good" : convRate >= 65 ? "warn" : "bad";
+
+    const connector = i === 0 ? "" : `
+      <div class="funnel-connector">
+        <div class="funnel-connector-line"></div>
+        <span class="funnel-rate-badge ${rateClass}">
+          <span class="rate-val">${convRate}%</span>
+          转化 · 损失 ${compact(counts[i-1] - count)}
+        </span>
+      </div>`;
+
+    return `
+      ${connector}
+      <div class="funnel-stage">
+        <div class="funnel-side-label">${stage.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${widthPct.toFixed(1)}%;background:${stage.color}">
+            <div class="funnel-bar-label">
+              <span class="funnel-bar-count">${compact(count)}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  // 耗时
+  const timeMax = Math.max(...times.filter(Boolean));
+  document.getElementById("funnelTimeList").innerHTML = FUNNEL_STAGES
+    .filter((_, i) => i > 0)
+    .map((stage, i) => {
+      const t = times[i + 1];
+      const w = Math.max(8, Math.round((t / timeMax) * 100));
+      return `<div class="rank-row">
+        <span>${stage.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${stage.color}"></div></div>
+        <strong>${t.toFixed(1)}h</strong>
+      </div>`;
+    }).join("");
+
+  // 处置类型
+  document.getElementById("funnelActionList").innerHTML = ACTION_TYPES.map((a, i) => {
+    const colors = ["#0d9488","#3b82f6","#dc2626","#d97706","#9ca3af"];
+    return `<div class="rank-row">
+      <span>${a.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${a.pct}%;background:${colors[i]}"></div></div>
+      <strong>${a.pct}%</strong>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("funnelWindowSelect").addEventListener("change", renderFunnel);
+document.getElementById("funnelSurfaceSelect").addEventListener("change", renderFunnel);
+renderFunnel();
+
+/* ══════════════════════════════════════
+   行为路径
+══════════════════════════════════════ */
+const TL_EVENT_TEMPLATES = [
+  { type: "system",    title: "账号注册",          desc: "新账号通过手机号注册，来源：{source}",              tags: ["系统事件"] },
+  { type: "report",    title: "收到用户举报",        desc: "内容被 {n} 名用户举报，类型：{policy}",            tags: ["举报"] },
+  { type: "system",    title: "机器审核触发",        desc: "AI 模型置信度 {score}%，命中策略：{policy}",       tags: ["自动审核"] },
+  { type: "violation", title: "确认违规",           desc: "审核员判定违规，适用政策：{policy}",                tags: ["违规", "人工审核"] },
+  { type: "action",    title: "执行处置",           desc: "{action}，预计影响时长：{duration}",               tags: ["处置"] },
+  { type: "report",    title: "再次收到举报",        desc: "新增 {n} 条举报，风险分上升 {delta}",              tags: ["举报", "风险上升"] },
+  { type: "appeal",    title: "用户发起申诉",        desc: "申诉理由：内容符合社区准则，复核优先级：{priority}", tags: ["申诉"] },
+  { type: "system",    title: "申诉驳回",           desc: "复核结论：原处置决定维持，政策依据：{policy}",       tags: ["申诉", "系统事件"] },
+  { type: "violation", title: "二次违规记录",        desc: "触发累计违规阈值，自动升级账号风险等级",            tags: ["违规", "风险上升"] },
+  { type: "action",    title: "账号永久封禁",        desc: "累计违规次数超限，账号已永久停用",                  tags: ["处置", "高风险"] },
+];
+
+const POLICIES = ["仇恨言论","成人内容","骚扰","虚假信息","垃圾内容","暴力内容"];
+const ACTIONS  = ["内容下架并警告","限制发布功能 7 天","账号暂停 30 天"];
+const SOURCES  = ["手机号","第三方登录","邮箱"];
+
+function fillTemplate(tpl, rng) {
+  return tpl
+    .replace("{source}",   SOURCES[rng(0, 3)])
+    .replace("{n}",        String(rng(3, 40)))
+    .replace("{policy}",   POLICIES[rng(0, 6)])
+    .replace("{score}",    String(rng(72, 98)))
+    .replace("{action}",   ACTIONS[rng(0, 3)])
+    .replace("{duration}", rng(3, 31) + " 天")
+    .replace("{delta}",    String(rng(5, 20)))
+    .replace("{priority}", ["P0","P1","P2"][rng(0, 3)]);
+}
+
+function buildTimeline(accountId) {
+  let seed = accountId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rng = (min, max) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return min + (seed % (max - min)); };
+
+  const now = new Date("2026-05-31T18:00:00");
+  const nEvents = rng(5, 11);
+  const selectedIndices = [];
+  while (selectedIndices.length < nEvents) {
+    const idx = rng(0, TL_EVENT_TEMPLATES.length);
+    if (!selectedIndices.includes(idx)) selectedIndices.push(idx);
+  }
+  selectedIndices.sort((a, b) => a - b);
+
+  let t = new Date(now.getTime() - rng(60, 180) * 24 * 3600000);
+  return selectedIndices.map(idx => {
+    const tpl = TL_EVENT_TEMPLATES[idx];
+    t = new Date(t.getTime() + rng(1, 72) * 3600000);
+    return {
+      type:  tpl.type,
+      title: tpl.title,
+      desc:  fillTemplate(tpl.desc, rng),
+      tags:  tpl.tags,
+      time:  new Date(t),
+    };
+  });
+}
+
+function buildProfile(account) {
+  return [
+    { label: "User ID",    value: account.account_id },
+    { label: "风险等级",   value: account.risk_level },
+    { label: "风险分",     value: account.risk_score.toFixed(1) },
+    { label: "账号状态",   value: account.status },
+    { label: "业务域",     value: account.surface },
+    { label: "地区",       value: account.region },
+    { label: "举报次数",   value: account.report_count },
+    { label: "违规次数",   value: account.violation_count },
+    { label: "所属簇",     value: account.cluster },
+    { label: "最近活跃",   value: account.last_seen.slice(0, 10) },
+  ];
+}
+
+let cachedAccounts = [];
+
+function populateTimelineSelect(accounts) {
+  cachedAccounts = accounts;
+  const sel = document.getElementById("timelineAccountSelect");
+  sel.innerHTML = '<option value="">选择账号…</option>' +
+    accounts.map(a =>
+      `<option value="${escapeHtml(a.account_id)}">${escapeHtml(a.account_id)} · 风险分 ${a.risk_score.toFixed(0)}</option>`
+    ).join("");
+}
+
+function renderTimeline(accountId) {
+  const account = cachedAccounts.find(a => a.account_id === accountId);
+  if (!account) return;
+
+  // 画像
+  const profile = buildProfile(account);
+  document.getElementById("timelineProfile").innerHTML = profile.map(row =>
+    `<div class="profile-stat">
+       <span>${escapeHtml(row.label)}</span>
+       <strong>${escapeHtml(String(row.value))}</strong>
+     </div>`
+  ).join("");
+
+  // 时间线
+  const events = buildTimeline(accountId);
+  document.getElementById("timelineEventMeta").textContent =
+    `${events.length} 个事件 · ${events[0].time.toLocaleDateString("zh-CN")} — ${events.at(-1).time.toLocaleDateString("zh-CN")}`;
+
+  document.getElementById("timelineEvents").innerHTML = events.map(ev => {
+    const timeStr = ev.time.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }) +
+      " " + ev.time.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    const tagsHtml = ev.tags.map(t => `<span class="tl-tag ${ev.type}">${escapeHtml(t)}</span>`).join("");
+    return `
+      <div class="tl-event">
+        <div class="tl-time">${timeStr}</div>
+        <div class="tl-dot"><div class="tl-dot-inner ${ev.type}"></div></div>
+        <div class="tl-body">
+          <div class="tl-title">${escapeHtml(ev.title)}</div>
+          <div class="tl-desc">${escapeHtml(ev.desc)}</div>
+          <div class="tl-tags">${tagsHtml}</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+document.getElementById("timelineAccountSelect").addEventListener("change", e => {
+  if (e.target.value) renderTimeline(e.target.value);
+});
+
+document.getElementById("timelineRefreshBtn").addEventListener("click", () => {
+  const sel = document.getElementById("timelineAccountSelect");
+  if (sel.value) renderTimeline(sel.value);
+});
+
+/* ══════════════════════════════════════
+   实时查询
+══════════════════════════════════════ */
+const RT_EVENT_NAMES = [
+  "video_upload","live_start","comment_post","report_submit",
+  "violation_detected","action_taken","appeal_filed","login",
+  "follow_user","content_share","dm_send","search_query"
+];
+
+const RT_EVENT_DETAILS = {
+  video_upload:       "时长 {s}s · 标签：{tag}",
+  live_start:         "直播间 {room} · 预计观众 {n}",
+  comment_post:       "内容被 {n} 人点赞",
+  report_submit:      "举报类型：{policy} · 优先级 {pri}",
+  violation_detected: "命中策略：{policy} · AI 置信度 {score}%",
+  action_taken:       "动作：{action} · 执行人：{who}",
+  appeal_filed:       "申诉编号 #{id} · 状态：待复核",
+  login:              "设备：{device} · IP：{ip}",
+  follow_user:        "关注了 {n} 个账号",
+  content_share:      "分享至 {platform}",
+  dm_send:            "私信 {n} 名用户",
+  search_query:       '搜索词："…"',
+};
+
+const RT_TAGS = { video_upload:"system", live_start:"system", comment_post:"system",
+  report_submit:"report", violation_detected:"violation", action_taken:"action",
+  appeal_filed:"appeal", login:"system", follow_user:"system",
+  content_share:"system", dm_send:"system", search_query:"system" };
+
+function fillRtDetail(name, rng) {
+  const tpl = RT_EVENT_DETAILS[name] || "";
+  return tpl
+    .replace("{s}",       String(rng(15, 180)))
+    .replace("{tag}",     POLICIES[rng(0,6)])
+    .replace("{room}",    "#" + rng(10000, 99999))
+    .replace("{n}",       String(rng(1, 200)))
+    .replace("{policy}",  POLICIES[rng(0,6)])
+    .replace("{pri}",     ["P0","P1","P2"][rng(0,3)])
+    .replace("{score}",   String(rng(70,99)))
+    .replace("{action}",  ACTIONS[rng(0,3)])
+    .replace("{who}",     "审核员_" + rng(100,999))
+    .replace("{id}",      String(rng(100000,999999)))
+    .replace("{device}",  ["iOS","Android","Web"][rng(0,3)])
+    .replace("{ip}",      `${rng(1,255)}.${rng(0,255)}.x.x`)
+    .replace("{platform}",["微博","微信","Twitter"][rng(0,3)]);
+}
+
+function buildRealtimeData(userId) {
+  const account = cachedAccounts.find(a => a.account_id === userId);
+  let seed = userId.split("").reduce((a, c) => a + c.charCodeAt(0), 42);
+  const rng = (min, max) => { seed = (seed * 6364136223846793005n ? seed : (seed * 1103515245 + 12345)) & 0x7fffffff; return min + (seed % (max - min)); };
+
+  const risk_score   = account ? account.risk_score   : 40 + rng(0, 55);
+  const risk_level   = account ? account.risk_level   : (risk_score > 75 ? "Critical" : risk_score > 55 ? "High" : "Medium");
+  const region       = account ? account.region       : ["US","BR","ID","VN","TH"][rng(0,5)];
+  const surface      = account ? account.surface      : ["Video","Live","Account"][rng(0,3)];
+  const report_count = account ? account.report_count : rng(0, 30);
+  const violation_count = account ? account.violation_count : rng(0, report_count + 1);
+
+  const now = new Date("2026-05-31T18:30:00");
+  const nEvents = 12;
+  const events = Array.from({ length: nEvents }, (_, i) => {
+    const name = RT_EVENT_NAMES[rng(0, RT_EVENT_NAMES.length)];
+    const minutesAgo = rng(0, 72 * 60);
+    const t = new Date(now.getTime() - minutesAgo * 60000);
+    return { name, detail: fillRtDetail(name, rng), time: t, type: RT_TAGS[name] };
+  }).sort((a, b) => b.time - a.time);
+
+  return { userId, risk_score, risk_level, region, surface, report_count, violation_count, events };
+}
+
+function renderRealtimeResult(data) {
+  const avatarColors = { Critical:"#dc2626", High:"#d97706", Medium:"#2563eb", Low:"#16a34a" };
+  const avatarColor = avatarColors[data.risk_level] || "#6b7280";
+  const initial = data.userId.slice(0, 2).toUpperCase();
+
+  const riskBadgeClass = { Critical:"critical", High:"high", Medium:"medium" }[data.risk_level] || "";
+
+  document.getElementById("realtimeResult").innerHTML = `
+    <div class="rt-profile-grid">
+      <!-- 左：用户画像卡 -->
+      <div class="rt-card">
+        <div class="rt-user-hero">
+          <div class="rt-avatar" style="background:${avatarColor}">${escapeHtml(initial)}</div>
+          <div>
+            <div class="rt-user-name">${escapeHtml(data.userId)}</div>
+            <div class="rt-user-sub">${escapeHtml(data.region)} · ${escapeHtml(data.surface)}</div>
+          </div>
+          <span class="risk-score ${riskBadgeClass}" style="margin-left:auto">${data.risk_score.toFixed(0)}</span>
+        </div>
+        <div class="rt-stats-grid">
+          <div class="rt-stat">
+            <span>举报次数</span>
+            <strong>${data.report_count}</strong>
+          </div>
+          <div class="rt-stat">
+            <span>违规次数</span>
+            <strong style="color:${data.violation_count > 0 ? 'var(--red)' : 'inherit'}">${data.violation_count}</strong>
+          </div>
+          <div class="rt-stat">
+            <span>风险等级</span>
+            <strong style="color:${avatarColor}">${escapeHtml(data.risk_level)}</strong>
+          </div>
+        </div>
+        <div class="rt-card-body" style="padding-top:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">查询时间</div>
+          <div style="font-size:13px;color:var(--ink)">2026-05-31 18:30:00</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">数据延迟 &lt; 5s · 验证环境</div>
+        </div>
+      </div>
+
+      <!-- 右：最近事件 -->
+      <div class="rt-card">
+        <div class="rt-card-header">
+          <h3>最近 72 小时事件</h3>
+          <span class="badge">${data.events.length} 条</span>
+        </div>
+        <div class="rt-events-list">
+          ${data.events.map(ev => {
+            const timeStr = ev.time.toLocaleDateString("zh-CN",{month:"2-digit",day:"2-digit"}) +
+              " " + ev.time.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"});
+            return `<div class="rt-event-row">
+              <div class="rt-event-time">${timeStr}</div>
+              <div>
+                <div class="rt-event-name">${escapeHtml(ev.name)}</div>
+                <div class="rt-event-detail">${escapeHtml(ev.detail)}</div>
+              </div>
+              <span class="tl-tag ${ev.type}" style="justify-self:end;align-self:start">${escapeHtml(ev.type)}</span>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>`;
+}
+
+function doRealtimeQuery() {
+  const uid = document.getElementById("realtimeInput").value.trim();
+  if (!uid) { showToast("请输入 User ID"); return; }
+  const data = buildRealtimeData(uid);
+  renderRealtimeResult(data);
+  showToast(`已拉取 ${uid} 的实时画像`);
+}
+
+document.getElementById("realtimeQueryBtn").addEventListener("click", doRealtimeQuery);
+document.getElementById("realtimeInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") doRealtimeQuery();
+});
+document.getElementById("realtimeDemoBtn").addEventListener("click", () => {
+  const demoIds = cachedAccounts.length ? cachedAccounts.slice(0,3).map(a=>a.account_id) : ["user_live_003","user_video_012","user_account_007"];
+  const uid = demoIds[Math.floor(Math.random() * demoIds.length)];
+  document.getElementById("realtimeInput").value = uid;
+  doRealtimeQuery();
+});
+
+/* ══ 将账号数据共享给行为路径模块 ══ */
+const _origRenderAccounts = renderAccounts;
+renderAccounts = function(payload) {
+  _origRenderAccounts(payload);
+  if ((payload.accounts || []).length) {
+    populateTimelineSelect(payload.accounts);
+  }
+};

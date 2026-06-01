@@ -37,6 +37,18 @@
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4.5v4c0 3 2.5 5.5 6 6 3.5-.5 6-3 6-6v-4L8 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             治理闭环
           </a>
+          <a href="#funnel">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12l-4.5 5.5V13l-3-1.5V8.5L2 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            漏斗分析
+          </a>
+          <a href="#timeline">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="1.5" fill="currentColor"/><circle cx="4" cy="8" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><line x1="6" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            行为路径
+          </a>
+          <a href="#realtime">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            实时查询
+          </a>
         </nav>
         <div class="side-meta">
           <span>环境</span>
@@ -276,6 +288,111 @@
               </div>
             </section>
           </section>
+          <!-- ── 漏斗分析 ── -->
+          <section id="funnel" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>漏斗分析</h2>
+                <p>T&S 处置全链路转化与耗时</p>
+              </div>
+              <div class="actions" style="gap:8px">
+                <div class="control-group" style="flex-direction:row;align-items:center;gap:8px">
+                  <label style="font-size:12px;color:var(--muted);white-space:nowrap">时间窗口</label>
+                  <select id="funnelWindowSelect" style="width:110px">
+                    <option value="7">近 7 天</option>
+                    <option value="14">近 14 天</option>
+                    <option value="30">近 30 天</option>
+                  </select>
+                </div>
+                <div class="control-group" style="flex-direction:row;align-items:center;gap:8px">
+                  <label style="font-size:12px;color:var(--muted);white-space:nowrap">业务域</label>
+                  <select id="funnelSurfaceSelect" style="width:130px">
+                    <option value="all">全部</option>
+                    <option value="Video">视频内容</option>
+                    <option value="Live">直播</option>
+                    <option value="Account">账户</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="funnel-layout">
+              <!-- 漏斗主图 -->
+              <section class="panel funnel-main-panel">
+                <div class="panel-heading">
+                  <div><h3>处置流程漏斗</h3><p id="funnelMeta">举报 → 分诊 → 审核 → 处置 → 申诉</p></div>
+                  <span id="funnelTotalBadge" class="badge">-</span>
+                </div>
+                <div id="funnelChart" class="funnel-chart-wrap"></div>
+              </section>
+
+              <!-- 右侧指标面板 -->
+              <div class="funnel-side">
+                <section class="panel">
+                  <div class="panel-heading"><div><h3>各阶段耗时（中位数）</h3><p>小时</p></div></div>
+                  <div id="funnelTimeList" class="rank-bars"></div>
+                </section>
+                <section class="panel">
+                  <div class="panel-heading"><div><h3>处置类型分布</h3><p>已完成处置的动作构成</p></div></div>
+                  <div id="funnelActionList" class="rank-bars"></div>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <!-- ── 行为路径 ── -->
+          <section id="timeline" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>风险账号行为路径</h2>
+                <p>按时间顺序展示单账号事件序列与信号触发</p>
+              </div>
+              <div class="actions" style="gap:8px">
+                <select id="timelineAccountSelect" style="width:200px">
+                  <option value="">选择账号…</option>
+                </select>
+                <button class="secondary" id="timelineRefreshBtn">刷新</button>
+              </div>
+            </div>
+            <div class="timeline-layout">
+              <!-- 账号概览卡 -->
+              <section class="panel timeline-profile-panel">
+                <div class="panel-heading"><div><h3>账号画像</h3></div></div>
+                <div id="timelineProfile" class="timeline-profile-body">
+                  <p class="empty">请先选择账号</p>
+                </div>
+              </section>
+              <!-- 时间线 -->
+              <section class="panel timeline-events-panel">
+                <div class="panel-heading">
+                  <div><h3>事件时间线</h3><p id="timelineEventMeta">-</p></div>
+                </div>
+                <div id="timelineEvents" class="timeline-events-body">
+                  <p class="empty">请先选择账号</p>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <!-- ── 实时查询 ── -->
+          <section id="realtime" class="workspace-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>实时查询</h2>
+                <p>通过 User ID 即时拉取风险画像与最新事件</p>
+              </div>
+            </div>
+            <div class="realtime-search-bar">
+              <div class="realtime-input-wrap">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="realtime-search-icon"><circle cx="6.5" cy="6.5" r="4" stroke="#9ca3af" stroke-width="1.5"/><path d="M10 10l3.5 3.5" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <input id="realtimeInput" type="text" placeholder="输入 User ID，如 user_live_003…" class="realtime-input" />
+              </div>
+              <button id="realtimeQueryBtn">查询</button>
+              <button class="secondary" id="realtimeDemoBtn">演示数据</button>
+            </div>
+            <div id="realtimeResult" class="realtime-result"></div>
+          </section>
+
         </main>
       </div>
     </div>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: safetypulse
+    runtime: python
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: PORT
+        value: "10000"
+    plan: free
