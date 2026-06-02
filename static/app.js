@@ -1046,4 +1046,17 @@ document.getElementById("realtimeInput").addEventListener("keydown", e => {
   if (e.key === "Enter") doRealtimeQuery();
 });
 document.getElementById("realtimeDemoBtn").addEventListener("click", () => {
-  const demoIds = cachedAccounts.length ? cachedAccounts.slice(0,3).map(a=>a.account_id) : ["user_li
+  const demoIds = cachedAccounts.length ? cachedAccounts.slice(0,3).map(a=>a.account_id) : ["user_live_003","user_video_012","user_account_007"];
+  const uid = demoIds[Math.floor(Math.random() * demoIds.length)];
+  document.getElementById("realtimeInput").value = uid;
+  doRealtimeQuery();
+});
+
+/* ══ 将账号数据共享给行为路径模块 ══ */
+const _origRenderAccounts = renderAccounts;
+renderAccounts = function(payload) {
+  _origRenderAccounts(payload);
+  if ((payload.accounts || []).length) {
+    populateTimelineSelect(payload.accounts);
+  }
+};
