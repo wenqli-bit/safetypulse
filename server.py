@@ -1719,4 +1719,4 @@ def main() -> None:
     init_db()
     ensure_safety_seeded()
     port = int(os.environ.get("PORT", "8000"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), Attribution
+    server = ThreadingHTTPServer(("0.0.0.0", port), AttributionHandler)
