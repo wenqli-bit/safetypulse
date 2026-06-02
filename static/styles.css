@@ -425,6 +425,17 @@ select:focus {
   color: var(--ink);
 }
 
+.card-window {
+  margin-left: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--teal);
+  background: var(--teal-light);
+  border-radius: 999px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
 .metric-card small,
 .up,
 .down {
@@ -1289,19 +1300,4 @@ tbody tr:last-child td { border-bottom: 0; }
 
   .content,
   .topbar {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .metric-grid,
-  .chart-grid,
-  .stat-strip,
-  .side-nav {
-    grid-template-columns: 1fr;
-  }
-
-  .rank-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
+    padding-lef

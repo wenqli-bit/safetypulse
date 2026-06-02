@@ -62,7 +62,11 @@ function showToast(message) {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
+  // Add cache-bust timestamp so browser never serves stale data
+  const sep = path.includes("?") ? "&" : "?";
+  const bustPath = `${path}${sep}_t=${Date.now()}`;
+  const response = await fetch(bustPath, {
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
   });
@@ -94,11 +98,13 @@ function renderCards(cards) {
     .map((card) => {
       const directionClass = card.direction === "up" ? "up" : "down";
       const sign = card.delta > 0 ? "+" : "";
+      const isCount = card.key === "exposures" || card.key === "risk_accounts" || card.key === "incidents";
+      const windowLabel = isCount ? `<span class="card-window">近 ${state.days} 天</span>` : "";
       return `
         <article class="metric-card">
-          <span>${escapeHtml(card.label)}</span>
+          <span>${escapeHtml(card.label)}${windowLabel}</span>
           <strong>${displayCardValue(card)}</strong>
-          <small class="${directionClass}">${sign}${number(card.delta, 1)}% vs baseline</small>
+          <small class="${directionClass}">${sign}${number(card.delta, 1)}% vs 上期</small>
         </article>
       `;
     })
@@ -627,6 +633,7 @@ function wireNavigation() {
 
 els.windowSelect.addEventListener("change", () => {
   state.days = Number(els.windowSelect.value);
+  showToast(`已切换至近 ${state.days} 天数据`);
   refresh();
 });
 
@@ -1039,17 +1046,4 @@ document.getElementById("realtimeInput").addEventListener("keydown", e => {
   if (e.key === "Enter") doRealtimeQuery();
 });
 document.getElementById("realtimeDemoBtn").addEventListener("click", () => {
-  const demoIds = cachedAccounts.length ? cachedAccounts.slice(0,3).map(a=>a.account_id) : ["user_live_003","user_video_012","user_account_007"];
-  const uid = demoIds[Math.floor(Math.random() * demoIds.length)];
-  document.getElementById("realtimeInput").value = uid;
-  doRealtimeQuery();
-});
-
-/* ══ 将账号数据共享给行为路径模块 ══ */
-const _origRenderAccounts = renderAccounts;
-renderAccounts = function(payload) {
-  _origRenderAccounts(payload);
-  if ((payload.accounts || []).length) {
-    populateTimelineSelect(payload.accounts);
-  }
-};
+  const demoIds = cachedAccounts.length ? cachedAccounts.slice(0,3).map(a=>a.account_id) : ["user_li
